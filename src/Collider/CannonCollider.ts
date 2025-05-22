@@ -97,6 +97,8 @@ export class CannonCollider implements ICollider {
 
 	private _scale: Vector3;
 
+	/** 有localOffset时, 暂存世界坐标系下_colliderShape与节点的距离 */
+	private WorldDistance: number;
 
 	/**
 	* @internal
@@ -120,6 +122,7 @@ export class CannonCollider implements ICollider {
 		this._initCollider();
 		this.setCollisionGroup(CannonPysiceManager.COLLISIONFILTERGROUP_DEFAULTFILTER);
 		this.setCanCollideWith(CannonPysiceManager.COLLISIONFILTERGROUP_ALLFILTER);
+		this.inPhysicUpdateListIndex = -1;
 	}
 
 	getCapable(value: number): boolean {
@@ -252,6 +255,8 @@ export class CannonCollider implements ICollider {
 				var worldMat: Matrix4x4 = transform.worldMatrix;
 				Vector3.transformCoordinate(shapeOffset, worldMat, physicPosition);
 				btPosition.set(physicPosition.x, physicPosition.y, physicPosition.z);
+
+				this.WorldDistance = Vector3.distance(transform.position, btPosition);
 			} else {
 				btPosition.set(position.x, position.y, position.z);
 			}
@@ -277,6 +282,22 @@ export class CannonCollider implements ICollider {
 		if (force || this._getTransformFlag(Transform3D.TRANSFORM_WORLDSCALE)) {
 			this._onScaleChange(transform.getWorldLossyScale());
 			this._setTransformFlag(Transform3D.TRANSFORM_WORLDSCALE, false);
+
+			var shapeOffset = this._colliderShape._localOffset;
+			if (shapeOffset.x !== 0 || shapeOffset.y !== 0 || shapeOffset.z !== 0)
+			{
+				var position = transform.position;
+				var btPosition = CannonCollider._btVector30;
+
+				var physicPosition = CannonCollider._tempVector30;
+				var worldMat = transform.worldMatrix;
+				Vector3.transformCoordinate(shapeOffset, worldMat, physicPosition);
+				btPosition.set(physicPosition.x, physicPosition.y, physicPosition.z);
+
+				physicTransformOut.position.set(btPosition.x, btPosition.y, btPosition.z);
+
+				this.WorldDistance = Vector3.distance(transform.position, btPosition);
+			}
 		}
 	}
 
@@ -320,6 +341,9 @@ export class CannonCollider implements ICollider {
 			rotShapePosition.y = localOffset.y;
 			rotShapePosition.z = localOffset.z;
 			Vector3.transformQuat(rotShapePosition, rotation, rotShapePosition);
+
+			Vector3.normalize(rotShapePosition, rotShapePosition);
+			Vector3.scale(rotShapePosition, this.WorldDistance, rotShapePosition);
 
 			position.x = btPosition.x - rotShapePosition.x;
 			position.y = btPosition.y - rotShapePosition.z;

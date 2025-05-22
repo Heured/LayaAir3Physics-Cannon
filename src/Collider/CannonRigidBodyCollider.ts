@@ -142,6 +142,14 @@ export class CannonRigidBodyCollider extends CannonCollider implements IDynamicC
 		return false;
 	}
 
+	allowSleep(bAllow) {
+		if (this._isKinematic)
+		{
+			return;
+		}
+		this._cannonColliderObject.allowSleep = bAllow;
+	}
+
 	/**
 	 * 是否为运动物体，如果为true仅可通过transform属性移动物体,而非其他力相关属性。
 	 */
@@ -242,8 +250,8 @@ export class CannonRigidBodyCollider extends CannonCollider implements IDynamicC
 		this._isTrigger = value;
 		if (this._cannonColliderObject) {
 			this._cannonColliderObject.isTrigger = value;
+			var flag = this._cannonColliderObject.type;
 			if (value) {
-				var flag = this._cannonColliderObject.type;
 				//TODO:可能要改
 				this._cannonColliderObject.collisionResponse = false;
 				// if ((flag & CANNON.Body.STATIC) === 0)
@@ -264,10 +272,16 @@ export class CannonRigidBodyCollider extends CannonCollider implements IDynamicC
 	 */
 	constructor(physicsManager: CannonPysiceManager) {
 		super(physicsManager);
-		if (!this._isKinematic)
-			this._cannonColliderObject.type = CANNON.Body.DYNAMIC;
-		else
+		if (this._isKinematic)
+		{
 			this._cannonColliderObject.type = CANNON.Body.KINEMATIC;
+			this.inPhysicUpdateListIndex = -1;
+		}
+		else
+		{
+			this._cannonColliderObject.type = CANNON.Body.DYNAMIC;
+			this.inPhysicUpdateListIndex = undefined;
+		}
 	}
 	getLinearVelocity(): Vector3 {
 		// throw new Error("Method not implemented.");
