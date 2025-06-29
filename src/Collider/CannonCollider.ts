@@ -219,7 +219,7 @@ export class CannonCollider implements ICollider {
 				shape.addToCannonBody();
 				(this._isSimulate && lastColliderShape) && (this._removeFromSimulation());//修改shape必须把Collison从物理世界中移除再重新添加
 				this._onShapeChange(shape);//
-				if ((this._isSimulate || !lastColliderShape) && this.componentEnable) {
+				if (this.componentEnable) {
 					this._derivePhysicsTransformation(true);
 					this._addToSimulation();
 				}
