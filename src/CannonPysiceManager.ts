@@ -389,6 +389,7 @@ export class CannonPysiceManager implements IPhysicsManager {
 		this._updateCollisions();
 		this.dispatchCollideEvent();
 		++this._updateCount;
+		this._collisionsUtils.recoverAllHitResultsPool();
 	}
 
 	/**

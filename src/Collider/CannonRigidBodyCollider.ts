@@ -53,7 +53,7 @@ export class CannonRigidBodyCollider extends CannonCollider implements IDynamicC
 		this._rigidBodyCapableMap.set(EColliderCapable.RigidBody_MassCenter, false);
 		this._rigidBodyCapableMap.set(EColliderCapable.RigidBody_MaxAngularVelocity, false);
 		this._rigidBodyCapableMap.set(EColliderCapable.RigidBody_MaxDepenetrationVelocity, false);
-		this._rigidBodyCapableMap.set(EColliderCapable.RigidBody_SleepThreshold, false);
+		this._rigidBodyCapableMap.set(EColliderCapable.RigidBody_SleepThreshold, true);
 		this._rigidBodyCapableMap.set(EColliderCapable.RigidBody_SleepAngularVelocity, false);
 		this._rigidBodyCapableMap.set(EColliderCapable.RigidBody_SolverIterations, false);
 		this._rigidBodyCapableMap.set(EColliderCapable.RigidBody_AllowDetectionMode, true);
@@ -66,6 +66,8 @@ export class CannonRigidBodyCollider extends CannonCollider implements IDynamicC
 		this._rigidBodyCapableMap.set(EColliderCapable.RigidBody_ApplyTorque, true);
 		this._rigidBodyCapableMap.set(EColliderCapable.RigidBody_ApplyImpulse, true);
 		this._rigidBodyCapableMap.set(EColliderCapable.RigidBody_ApplyTorqueImpulse, true);
+		this._rigidBodyCapableMap.set(EColliderCapable.RigidBody_WorldPosition, true);
+		this._rigidBodyCapableMap.set(EColliderCapable.RigidBody_WorldOrientation, true);
 	}
 
 	getCapable(value: number): boolean {
