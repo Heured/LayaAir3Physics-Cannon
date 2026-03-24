@@ -321,6 +321,7 @@ export class CannonPysiceManager implements IPhysicsManager {
 		}
 		collider._derivePhysicsTransformation(true);
 		this._discreteDynamicsWorld.addBody(collider._cannonColliderObject);
+		collider._cannonColliderObject.aabbNeedsUpdate = true;
 		collider._isSimulate = true;
 
 	}
