@@ -71,6 +71,10 @@ export class ConnonJoint implements IJoint {
         throw new Error("Method not implemented.");
     }
 
-
+    destroy(): void {
+        this._manager = null;
+        this._ownerCollider = null;
+        this._otherCollider = null;
+    }
 
 }

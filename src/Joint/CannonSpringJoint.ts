@@ -7,7 +7,7 @@ export class CannonSpringJoint extends ConnonJoint implements ISpringJoint {
     _spring: CANNON.Spring;
     constructor(manager: CannonPysiceManager) {
         super(manager);
-        this._spring = new CANNON.Spring({})
+        this._spring = new CANNON.Spring(null, null);
     }
 
     setCollider(owner: CannonCollider): void {
@@ -43,6 +43,12 @@ export class CannonSpringJoint extends ConnonJoint implements ISpringJoint {
     }
     setDamping(damping: number): void {
         this._spring.damping = damping;
+    }
+
+    destroy(): void {
+        this._manager.removeJoint(this);
+        this._spring = null;
+        super.destroy();
     }
 
 }

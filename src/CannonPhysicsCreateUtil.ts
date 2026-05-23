@@ -12,7 +12,7 @@ import { CannonCollider } from "./Collider/CannonCollider";
 import { CannonColliderShape } from "./Shape/CannonColliderShape";
 import { CannonSpringJoint } from "./Joint/CannonSpringJoint";
 import { CannonMeshCollderShape } from "./Shape/CannonMeshCollderShape";
-import { EPhysicsCapable, ICharacterController, ICustomJoint, ID6Joint, IFixedJoint, IHingeJoint, IPhysicsCreateUtil, IPhysicsManager, Laya3D, Mesh, PhysicsSettings } from "../libs/LayaAir";
+import { EPhysicsCapable, ICharacterController, ICompoundColliderShape, ICustomJoint, ID6Joint, IFixedJoint, IHingeJoint, IPhysicsCreateUtil, IPhysicsManager, Laya3D, Mesh, PhysicsSettings } from "../libs/LayaAir";
 import { ConnonHeightFieldShape } from "./Shape/ConnonHeightFieldShape";
 
 
@@ -188,6 +188,10 @@ export class CannonPhysicsCreateUtil implements IPhysicsCreateUtil {
     }
     createCorveMesh?(mesh: Mesh): Mesh {
         throw new Error("Method not implemented.");
+    }
+
+    createCompoundShape(): ICompoundColliderShape {
+        return null;
     }
 }
 

@@ -108,17 +108,27 @@ export class CannonCollisionTool {
 		this._contactPointsPool.length = 0;
 
 		this._collisionsPool.length = 0;
-		for (var subCollisionsKey in this._collisionsPool) {
-			var subCollisions: any = this._collisionsPool[subCollisionsKey];
-			var wholeDelete: boolean = true;
-			for (var collisionKey in subCollisions) {
+
+		for (var subCollisionsKey in this._collisions)
+		{
+			var subCollisions = this._collisions[subCollisionsKey];
+			var wholeDelete = true;
+			for (var collisionKey in subCollisions)
+			{
 				if (subCollisions[collisionKey])
+				{
 					wholeDelete = false;
+
+				}
 				else
+				{
 					delete subCollisions[collisionKey];
+				}
 			}
 			if (wholeDelete)
-				delete this._collisionsPool[subCollisionsKey];
+			{
+				delete this._collisions[subCollisionsKey];
+			}
 		}
 	}
 }

@@ -58,8 +58,8 @@ export class CannonRigidBodyCollider extends CannonCollider implements IDynamicC
 		this._rigidBodyCapableMap.set(EColliderCapable.RigidBody_SolverIterations, false);
 		this._rigidBodyCapableMap.set(EColliderCapable.RigidBody_AllowDetectionMode, true);
 		this._rigidBodyCapableMap.set(EColliderCapable.RigidBody_AllowKinematic, true);
-		this._rigidBodyCapableMap.set(EColliderCapable.RigidBody_LinearFactor, false);
-		this._rigidBodyCapableMap.set(EColliderCapable.RigidBody_AngularFactor, false);
+		this._rigidBodyCapableMap.set(EColliderCapable.RigidBody_LinearFactor, true);
+		this._rigidBodyCapableMap.set(EColliderCapable.RigidBody_AngularFactor, true);
 		this._rigidBodyCapableMap.set(EColliderCapable.RigidBody_ApplyForce, true);
 		this._rigidBodyCapableMap.set(EColliderCapable.RigidBody_ClearForce, true);
 		this._rigidBodyCapableMap.set(EColliderCapable.RigidBody_ApplyForceWithOffset, true);
@@ -138,13 +138,13 @@ export class CannonRigidBodyCollider extends CannonCollider implements IDynamicC
 	/**
 	 * 是否处于睡眠状态。
 	 */
-	get isSleeping(): boolean {
+	isSleeping(): boolean {
 		if (this._cannonColliderObject)
 			return this._cannonColliderObject.sleepState != CANNON.Body.AWAKE;
 		return false;
 	}
 
-	allowSleep(bAllow) {
+	allowSleep(bAllow: boolean) {
 		if (this._isKinematic)
 		{
 			return;
@@ -252,7 +252,7 @@ export class CannonRigidBodyCollider extends CannonCollider implements IDynamicC
 		this._isTrigger = value;
 		if (this._cannonColliderObject) {
 			this._cannonColliderObject.isTrigger = value;
-			var flag = this._cannonColliderObject.type;
+			// var flag = this._cannonColliderObject.type;
 			if (value) {
 				//TODO:可能要改
 				this._cannonColliderObject.collisionResponse = false;
@@ -305,7 +305,13 @@ export class CannonRigidBodyCollider extends CannonCollider implements IDynamicC
 
 	}
 	setConstraints(linearFactor: Vector3, angularFactor: Vector3): void {
-		// this._cannonColliderObject
+		const _cannonColliderObject = this._cannonColliderObject;
+		if (!_cannonColliderObject)
+		{
+			return;
+		}
+		_cannonColliderObject.linearFactor.set(linearFactor.x, linearFactor.y, linearFactor.z);
+		_cannonColliderObject.angularFactor.set(angularFactor.x, angularFactor.y, angularFactor.z);
 	}
 
 

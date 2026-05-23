@@ -125,6 +125,15 @@ export class CannonColliderShape implements IColliderShape {
 		return this._type;
 	}
 
+	getPhysicsShape()
+	{
+		return this._btShape;
+	}
+
+	getOffset(): Vector3
+	{
+		return this._localOffset;
+	}
 
 	setOffset(position: Vector3): void {
 		position.cloneTo(this._localOffset);

@@ -113,7 +113,7 @@ export class CannonCollider implements ICollider {
 		this._cannonColliderObject = new CANNON.Body();
 		this._cannonColliderObject.material = new CANNON.Material();
 		this._physicsManager = physicsManager;
-		this._id = this._cannonColliderObject.layaID = CannonCollider._colliderID++;
+		this._id = (this._cannonColliderObject as any).layaID = CannonCollider._colliderID++;
 		this._isTrigger = false;
 		this._enableProcessCollisions = false;
 		this._scale = new Vector3(1, 1, 1);
@@ -123,6 +123,10 @@ export class CannonCollider implements ICollider {
 		this.setCollisionGroup(CannonPysiceManager.COLLISIONFILTERGROUP_DEFAULTFILTER);
 		this.setCanCollideWith(CannonPysiceManager.COLLISIONFILTERGROUP_ALLFILTER);
 		this.inPhysicUpdateListIndex = -1;
+	}
+
+	allowSleep(value: boolean): void {
+		
 	}
 
 	getCapable(value: number): boolean {
@@ -256,7 +260,7 @@ export class CannonCollider implements ICollider {
 				Vector3.transformCoordinate(shapeOffset, worldMat, physicPosition);
 				btPosition.set(physicPosition.x, physicPosition.y, physicPosition.z);
 
-				this.WorldDistance = Vector3.distance(transform.position, btPosition);
+				this.WorldDistance = Vector3.distance(transform.position, btPosition as any);
 			} else {
 				btPosition.set(position.x, position.y, position.z);
 			}
@@ -296,7 +300,7 @@ export class CannonCollider implements ICollider {
 
 				physicTransformOut.position.set(btPosition.x, btPosition.y, btPosition.z);
 
-				this.WorldDistance = Vector3.distance(transform.position, btPosition);
+				this.WorldDistance = Vector3.distance(transform.position, btPosition as any);
 			}
 		}
 	}

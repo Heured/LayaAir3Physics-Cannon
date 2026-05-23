@@ -18,7 +18,7 @@ const sourcemap = true;
 //编译新的库文件只需要在packsDef中配置一下新的库就可以了
 const packsDef = [
     {
-        'libName': "cannon",
+        'libName': "cannon-es",
         'input': [
             '*.**',
             '**/*.*',
@@ -183,15 +183,15 @@ gulp.task("buildJs", async () => {
 
 gulp.task('concatCannonPhysics', () => {
     return gulp.src([
-        path.join("./build/jslib", "laya.cannon.js"),
-        './libs/cannon.js',
+        path.join("./build/jslib", "laya.cannon-es.js"),
+        './libs/cannon-es.umd.js',
     ])
-        .pipe(concat('laya.cannon.js'))
+        .pipe(concat('laya.cannon-es.js'))
         .pipe(gulp.dest('./out/'));
 });
 
 gulp.task('copyLibs', (done) => {
-    fs.copyFile(path.join("./build/jslib", "laya.cannon.js.map"), path.join("./out", "laya.cannon.js.map"), done);
+    fs.copyFile(path.join("./build/jslib", "laya.cannon-es.js.map"), path.join("./out", "laya.cannon-es.js.map"), done);
 });
 gulp.task('build',
     gulp.series('compile', 'buildJs', 'concatCannonPhysics', 'copyLibs'));

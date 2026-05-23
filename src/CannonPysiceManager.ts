@@ -1,11 +1,427 @@
 
-import { IPhysicsManager, Vector3, Event, Collision, PhysicsUpdateList, PhysicsSettings, ContactPoint, Ray, HitResult, ICollider, IColliderShape, Quaternion } from "../libs/LayaAir";
+import { IPhysicsManager, Vector3, Event, Collision, PhysicsUpdateList, PhysicsSettings, ContactPoint, Ray, HitResult, ICollider, IColliderShape, Quaternion, Laya, IStageConfig } from "../libs/LayaAir";
 import { CannonCollisionTool } from "./CannonCollisionTool";
 import { CannonCollider } from "./Collider/CannonCollider";
 import { ConnonJoint } from "./Joint/ConnonJoint";
 import { CannonSpringJoint } from "./Joint/CannonSpringJoint";
 
+Laya.addBeforeInitCallback((stageConfig: IStageConfig) => {
+	const OverrideBroadphase = function(): void
+	{
+		const Broadphase_makePairsUnique_temp: { keys: string[] } = { keys: [] };
+		const Broadphase_makePairsUnique_p1: CANNON.Body[] = [];
+		const Broadphase_makePairsUnique_p2: CANNON.Body[] = [];
+		const BroadphasePro = CANNON.Broadphase.prototype;
+		BroadphasePro.makePairsUnique = function (pairs1: CANNON.Body[], pairs2: CANNON.Body[]) {
+			const t = Broadphase_makePairsUnique_temp as any;
+			const p1 = Broadphase_makePairsUnique_p1;
+			const p2 = Broadphase_makePairsUnique_p2;
+			const N = pairs1.length;
+		
+			for (let i = 0; i !== N; i++) {
+				p1[i] = pairs1[i];
+				p2[i] = pairs2[i];
+			}
+		
+			pairs1.length = 0;
+			pairs2.length = 0;
+		
+			/*
+			for (let i = 0; i !== N; i++) {
+				const id1 = p1[i].id;
+				const id2 = p2[i].id;
+				const key = id1 < id2 ? `${id1},${id2}` : `${id2},${id1}`;
+				t[key] = i;
+				t.keys.push(key);
+			}
+		
+			for (let i = 0; i !== t.keys.length; i++) {
+				const key = t.keys.pop();
+				const pairIndex = t[key];
+				pairs1.push(p1[pairIndex]);
+				pairs2.push(p2[pairIndex]);
+				delete t[key];
+			}
+			*/
+		
+			const keys = t.keys;
+		
+			for (var i = 0; i !== N; i++) {
+				var id1 = p1[i].id, id2 = p2[i].id;
+				var key = id1 < id2 ? id1 + "," + id2 : id2 + "," + id1;
+		
+				if (t[key] != undefined) {
+					continue;
+				}
+		
+				t[key] = i;
+				keys.push(key);
+			}
+		
+			while (keys.length) {
+				const key = keys.pop();
+				const pairIndex = t[key];
+		
+				pairs1.push(p1[pairIndex]);
+				pairs2.push(p2[pairIndex]);
+		
+				delete t[key];
+			}
+		};
+	}
+	
+	const OverrideWorld = function(): void
+	{
+		const World_step_postStepEvent = {
+			type: 'postStep'
+		}; // Dispatched before the world steps forward in time.
+		
+		const World_step_preStepEvent = {
+			type: 'preStep'
+		};
+		const World_step_collideEvent: any = {
+			type: CANNON.Body.COLLIDE_EVENT_NAME,
+			body: null,
+			contact: null
+		}; // Pools for unused objects
+		
+		const World_step_oldContacts: any[] = [];
+		const World_step_frictionEquationPool: any[] = []; // Reusable arrays for collision pairs
+		
+		const World_step_p1: any[] = [];
+		const World_step_p2: any[] = []; // Stuff for emitContactEvents
+		
+		const performance = (globalThis as any).performance || {};
+		
+		const WorldPro = CANNON.World.prototype;
+		WorldPro.internalStep = function(dt: number)
+		{
+			this.dt = dt;
+			const contacts = this.contacts;
+			const p1 = World_step_p1;
+			const p2 = World_step_p2;
+			const N = this.bodies.length;
+			const bodies = this.bodies;
+			const solver = this.solver;
+			const gravity = this.gravity;
+			const doProfiling = this.doProfiling;
+			const profile = this.profile;
+			const DYNAMIC = CANNON.Body.DYNAMIC;
+			let profilingStart = -Infinity;
+			const constraints = this.constraints;
+			const frictionEquationPool = World_step_frictionEquationPool;
+			gravity.length();
+			const gx = gravity.x;
+			const gy = gravity.y;
+			const gz = gravity.z;
+			let i = 0;
+		
+			if (doProfiling) {
+				profilingStart = performance.now();
+			} // Add gravity to all objects
+		
+		
+			for (i = 0; i !== N; i++) {
+				const bi = bodies[i];
+		
+				if (bi.type === DYNAMIC) {
+					// Only for dynamic bodies
+					const f = bi.force;
+					const m = bi.mass;
+					f.x += m * gx;
+					f.y += m * gy;
+					f.z += m * gz;
+				}
+			} // Update subsystems
+		
+		
+			for (let i = 0, Nsubsystems = this.subsystems.length; i !== Nsubsystems; i++) {
+				this.subsystems[i].update();
+			} // Collision detection
+		
+		
+			if (doProfiling) {
+				profilingStart = performance.now();
+			}
+		
+			p1.length = 0; // Clean up pair arrays from last step
+		
+			p2.length = 0;
+			this.broadphase.collisionPairs(this, p1, p2);
+		
+			if (doProfiling) {
+				profile.broadphase = performance.now() - profilingStart;
+			} // Remove constrained pairs with collideConnected == false
+		
+		
+			let Nconstraints = constraints.length;
+		
+			for (i = 0; i !== Nconstraints; i++) {
+				const c = constraints[i];
+		
+				if (!c.collideConnected) {
+					for (let j = p1.length - 1; j >= 0; j -= 1) {
+						if (c.bodyA === p1[j] && c.bodyB === p2[j] || c.bodyB === p1[j] && c.bodyA === p2[j]) {
+							p1.splice(j, 1);
+							p2.splice(j, 1);
+						}
+					}
+				}
+			}
+		
+			this.collisionMatrixTick(); // Generate contacts
+		
+			if (doProfiling) {
+				profilingStart = performance.now();
+			}
+		
+			const oldcontacts = World_step_oldContacts;
+			const NoldContacts = contacts.length;
+		
+			for (i = 0; i !== NoldContacts; i++) {
+				oldcontacts.push(contacts[i]);
+			}
+		
+			contacts.length = 0; // Transfer FrictionEquation from current list to the pool for reuse
+		
+			const NoldFrictionEquations = this.frictionEquations.length;
+		
+			for (i = 0; i !== NoldFrictionEquations; i++) {
+				frictionEquationPool.push(this.frictionEquations[i]);
+			}
+		
+			this.frictionEquations.length = 0;
+			this.narrowphase.getContacts(p1, p2, this, contacts, oldcontacts, // To be reused
+				this.frictionEquations, frictionEquationPool);
+		
+			if (doProfiling) {
+				profile.narrowphase = performance.now() - profilingStart;
+			} // Loop over all collisions
+		
+		
+			if (doProfiling) {
+				profilingStart = performance.now();
+			} // Add all friction eqs
+		
+		
+			for (i = 0; i < this.frictionEquations.length; i++) {
+				solver.addEquation(this.frictionEquations[i]);
+			}
+		
+			const ncontacts = contacts.length;
+		
+			for (let k = 0; k !== ncontacts; k++) {
+				// Current contact
+				const c = contacts[k]; // Get current collision indeces
+		
+				const bi = c.bi;
+				const bj = c.bj;
+				const si = c.si;
+				const sj = c.sj; // Get collision properties
+		
+				let cm;
+		
+				if (bi.material && bj.material) {
+					cm = this.getContactMaterial(bi.material, bj.material) || this.defaultContactMaterial;
+				} else {
+					cm = this.defaultContactMaterial;
+				} // c.enabled = bi.collisionResponse && bj.collisionResponse && si.collisionResponse && sj.collisionResponse;
+		
+		
+				cm.friction; // c.restitution = cm.restitution;
+				// If friction or restitution were specified in the material, use them
+		
+				if (bi.material && bj.material) {
+					if (bi.material.friction >= 0 && bj.material.friction >= 0) {
+						bi.material.friction * bj.material.friction;
+					}
+		
+					if (bi.material.restitution >= 0 && bj.material.restitution >= 0) {
+						c.restitution = bi.material.restitution * bj.material.restitution;
+					}
+				} // c.setSpookParams(
+				//           cm.contactEquationStiffness,
+				//           cm.contactEquationRelaxation,
+				//           dt
+				//       );
+		
+		
+				solver.addEquation(c); // // Add friction constraint equation
+				// if(mu > 0){
+				// 	// Create 2 tangent equations
+				// 	const mug = mu * gnorm;
+				// 	const reducedMass = (bi.invMass + bj.invMass);
+				// 	if(reducedMass > 0){
+				// 		reducedMass = 1/reducedMass;
+				// 	}
+				// 	const pool = frictionEquationPool;
+				// 	const c1 = pool.length ? pool.pop() : new FrictionEquation(bi,bj,mug*reducedMass);
+				// 	const c2 = pool.length ? pool.pop() : new FrictionEquation(bi,bj,mug*reducedMass);
+				// 	this.frictionEquations.push(c1, c2);
+				// 	c1.bi = c2.bi = bi;
+				// 	c1.bj = c2.bj = bj;
+				// 	c1.minForce = c2.minForce = -mug*reducedMass;
+				// 	c1.maxForce = c2.maxForce = mug*reducedMass;
+				// 	// Copy over the relative vectors
+				// 	c1.ri.copy(c.ri);
+				// 	c1.rj.copy(c.rj);
+				// 	c2.ri.copy(c.ri);
+				// 	c2.rj.copy(c.rj);
+				// 	// Construct tangents
+				// 	c.ni.tangents(c1.t, c2.t);
+				//           // Set spook params
+				//           c1.setSpookParams(cm.frictionEquationStiffness, cm.frictionEquationRelaxation, dt);
+				//           c2.setSpookParams(cm.frictionEquationStiffness, cm.frictionEquationRelaxation, dt);
+				//           c1.enabled = c2.enabled = c.enabled;
+				// 	// Add equations to solver
+				// 	solver.addEquation(c1);
+				// 	solver.addEquation(c2);
+				// }
+		
+				if (bi.allowSleep && bi.type === CANNON.Body.DYNAMIC && bi.sleepState === CANNON.Body.SLEEPING && bj.sleepState === CANNON.Body.AWAKE && bj.type !== CANNON.Body.STATIC) {
+					const speedSquaredB = bj.velocity.lengthSquared() + bj.angularVelocity.lengthSquared();
+					const speedLimitSquaredB = bj.sleepSpeedLimit ** 2;
+		
+					if (speedSquaredB >= speedLimitSquaredB * 2) {
+						bi.wakeUpAfterNarrowphase = true;
+					}
+				}
+		
+				if (bj.allowSleep && bj.type === CANNON.Body.DYNAMIC && bj.sleepState === CANNON.Body.SLEEPING && bi.sleepState === CANNON.Body.AWAKE && bi.type !== CANNON.Body.STATIC) {
+					const speedSquaredA = bi.velocity.lengthSquared() + bi.angularVelocity.lengthSquared();
+					const speedLimitSquaredA = bi.sleepSpeedLimit ** 2;
+		
+					if (speedSquaredA >= speedLimitSquaredA * 2) {
+						bj.wakeUpAfterNarrowphase = true;
+					}
+				} // Now we know that i and j are in contact. Set collision matrix state
+		
+		
+				this.collisionMatrix.set(bi, bj, true);
+		
+				if (!this.collisionMatrixPrevious.get(bi, bj)) {
+					// First contact!
+					// We reuse the collideEvent object, otherwise we will end up creating new objects for each new contact, even if there's no event listener attached.
+					World_step_collideEvent.body = bj;
+					World_step_collideEvent.contact = c;
+					bi.dispatchEvent(World_step_collideEvent);
+					World_step_collideEvent.body = bi;
+					bj.dispatchEvent(World_step_collideEvent);
+				}
+		
+				this.bodyOverlapKeeper.set(bi.id, bj.id);
+				this.shapeOverlapKeeper.set(si.id, sj.id);
+			}
+		
+			this.emitContactEvents();
+		
+			if (doProfiling) {
+				profile.makeContactConstraints = performance.now() - profilingStart;
+				profilingStart = performance.now();
+			} // Wake up bodies
+		
+		
+			for (i = 0; i !== N; i++) {
+				const bi = bodies[i];
+		
+				if (bi.wakeUpAfterNarrowphase) {
+					bi.wakeUp();
+					bi.wakeUpAfterNarrowphase = false;
+				}
+			} // Add user-added constraints
+		
+		
+			Nconstraints = constraints.length;
+		
+			for (i = 0; i !== Nconstraints; i++) {
+				const c = constraints[i];
+				c.update();
+		
+				for (let j = 0, Neq = c.equations.length; j !== Neq; j++) {
+					const eq = c.equations[j];
+					solver.addEquation(eq);
+				}
+			} // Solve the constrained system
+		
+		
+			solver.solve(dt, this);
+		
+			if (doProfiling) {
+				profile.solve = performance.now() - profilingStart;
+			} // Remove all contacts from solver
+		
+		
+			solver.removeAllEquations(); // Apply damping, see http://code.google.com/p/bullet/issues/detail?id=74 for details
+		
+			const pow = Math.pow;
+		
+			for (i = 0; i !== N; i++) {
+				const bi = bodies[i];
+		
+				if (bi.type & DYNAMIC) {
+					// Only for dynamic bodies
+					const ld = pow(1.0 - bi.linearDamping, dt);
+					const v = bi.velocity;
+					v.scale(ld, v);
+					const av = bi.angularVelocity;
+		
+					if (av) {
+						const ad = pow(1.0 - bi.angularDamping, dt);
+						av.scale(ad, av);
+					}
+				}
+			}
+		
+			this.dispatchEvent(World_step_preStepEvent); // Leap frog
+			// vnew = v + h*f/m
+			// xnew = x + h*vnew
+		
+			if (doProfiling) {
+				profilingStart = performance.now();
+			}
+		
+			const stepnumber = this.stepnumber;
+			const quatNormalize = stepnumber % (this.quatNormalizeSkip + 1) === 0;
+			const quatNormalizeFast = this.quatNormalizeFast;
+		
+			for (i = 0; i !== N; i++) {
+				bodies[i].integrate(dt, quatNormalize, quatNormalizeFast);
+				bodies[i].aabbNeedsUpdate && (this as any).callBackBody.push(bodies[i]);
+			}
+		
+			this.clearForces();
+			this.broadphase.dirty = true;
+		
+			if (doProfiling) {
+				profile.integrate = performance.now() - profilingStart;
+			} // Update step number
+		
+		
+			this.stepnumber += 1;
+			this.dispatchEvent(World_step_postStepEvent); // Sleeping update
+		
+			let hasActiveBodies = true;
+		
+			if (this.allowSleep) {
+				hasActiveBodies = false;
+		
+				for (i = 0; i !== N; i++) {
+					const bi = bodies[i];
+					bi.sleepTick(this.time);
+		
+					if (bi.sleepState !== CANNON.Body.SLEEPING) {
+						hasActiveBodies = true;
+					}
+				}
+			}
+		
+			this.hasActiveBodies = hasActiveBodies;
+		};
+	};
 
+	OverrideBroadphase();
+	OverrideWorld();
+});
 
 export class CannonPysiceManager implements IPhysicsManager {
 	/**默认碰撞组 */
@@ -109,7 +525,40 @@ export class CannonPysiceManager implements IPhysicsManager {
 		this.maxSubSteps = physicsSettings.maxSubSteps;
 		this.fixedTimeStep = physicsSettings.fixedTimeStep;
 		this._discreteDynamicsWorld = new CANNON.World();
-		this._broadphase = new CANNON.NaiveBroadphase();
+		(this._discreteDynamicsWorld as any).callBackBody = [];
+
+		const CannonSettings = (physicsSettings as any).Cannon;
+		if (CannonSettings)
+		{
+			this._discreteDynamicsWorld.quatNormalizeSkip = CannonSettings.quatNormalizeSkip ? 1 : 0;
+			this._discreteDynamicsWorld.quatNormalizeFast = CannonSettings.quatNormalizeFast;
+
+			if (CannonSettings.broadphase == "SAPBroadphase")
+			{
+				this._broadphase = new CANNON.SAPBroadphase(this._discreteDynamicsWorld);
+			}
+			else if (CannonSettings.broadphase == "GridBroadphase")
+			{
+				const Params = CannonSettings.GridBroadphase_Params;
+				const aabbMin = Params.aabbMin, aabbMax = Params.aabbMax;
+
+				this._broadphase = new CANNON.GridBroadphase(
+					new CANNON.Vec3(aabbMin.x, aabbMin.y, aabbMin.z)
+					, new CANNON.Vec3(aabbMax.x, aabbMax.y, aabbMax.z)
+					, Params.nx, Params.ny, Params.nz
+				);
+			}
+			else
+			{
+				this._broadphase = new CANNON.NaiveBroadphase();
+			}
+			this._broadphase.useBoundingBoxes = CannonSettings.useBoundingBoxes;
+		}
+		else
+		{
+			this._broadphase = new CANNON.NaiveBroadphase();
+		}
+
 		this._discreteDynamicsWorld.broadphase = this._broadphase;
 
 		this._discreteDynamicsWorld.defaultContactMaterial.contactEquationRelaxation = 3;
@@ -119,11 +568,11 @@ export class CannonPysiceManager implements IPhysicsManager {
 	setActiveCollider(collider: CannonCollider, value: boolean): void {
 		// throw new Error("Method not implemented.");
 		collider.active = value;
-        if (value) {
-            collider._physicsManager = this;
-        } else {
-            collider._physicsManager = null;
-        }
+		if (value) {
+			collider._physicsManager = this;
+		} else {
+			collider._physicsManager = null;
+		}
 	}
 	enableDebugDrawer?(value: boolean): void {
 		throw new Error("Method not implemented.");
@@ -141,15 +590,14 @@ export class CannonPysiceManager implements IPhysicsManager {
 	private _simulate(deltaTime: number): void {
 		this._updatedRigidbodies = 0;
 		if (this._discreteDynamicsWorld) {
-			this._discreteDynamicsWorld.callBackBody.length = 0;
-			this._discreteDynamicsWorld.allContacts.length = 0;
+			(this._discreteDynamicsWorld as any).callBackBody.length = 0;
 			this._discreteDynamicsWorld.step(this.fixedTimeStep, deltaTime, this.maxSubSteps);
 		}
-		var callBackBody: CANNON.Body[] = this._discreteDynamicsWorld.callBackBody;
+		var callBackBody: CANNON.Body[] = (this._discreteDynamicsWorld as any).callBackBody;
 
 		for (var i: number = 0, n = callBackBody.length; i < n; i++) {
 			var cannonBody: CANNON.Body = callBackBody[i];
-			var rigidbody: CannonCollider = CannonCollider._physicObjectsMap.get(cannonBody.layaID);
+			var rigidbody: CannonCollider = CannonCollider._physicObjectsMap.get((cannonBody as any).layaID);
 			this._updatedRigidbodies++;
 			rigidbody._updateTransformComponent(rigidbody._cannonColliderObject);
 		}
@@ -184,12 +632,12 @@ export class CannonPysiceManager implements IPhysicsManager {
 		this._previousFrameCollisions = previous;
 
 		var loopCount: number = this._updateCount;
-		var allContacts: CANNON.ContactEquation[] = this._discreteDynamicsWorld.allContacts;
+		var allContacts: CANNON.ContactEquation[] = this._discreteDynamicsWorld.contacts;
 		var numManifolds: number = allContacts.length;
 		for (var i: number = 0; i < numManifolds; i++) {
 			var contactEquation: CANNON.ContactEquation = allContacts[i];
-			var componentA = CannonCollider._physicObjectsMap.get(contactEquation.bi.layaID);
-			var componentB = CannonCollider._physicObjectsMap.get(contactEquation.bj.layaID);
+			var componentA = CannonCollider._physicObjectsMap.get((contactEquation.bi as any).layaID);
+			var componentB = CannonCollider._physicObjectsMap.get((contactEquation.bj as any).layaID);
 			var collision: Collision = null;
 			var isFirstCollision: boolean;//可能同时返回A和B多次,需要过滤
 			var contacts: ContactPoint[] = null;
@@ -244,8 +692,8 @@ export class CannonPysiceManager implements IPhysicsManager {
 		let loopCount = this._updateCount;
 		for (var i: number = 0, n: number = this._currentFrameCollisions.length; i < n; i++) {
 			var curFrameCol: Collision = this._currentFrameCollisions[i];
-			var colliderA = curFrameCol._colliderA;
-			var colliderB = curFrameCol._colliderB;
+			var colliderA = curFrameCol._colliderA as CannonCollider;
+			var colliderB = curFrameCol._colliderB as CannonCollider;
 			if (colliderA._destroyed || colliderB._destroyed)//前一个循环可能会销毁后面循环的同一物理组件
 				continue;
 			let ownerA = colliderA.owner;
@@ -275,8 +723,8 @@ export class CannonPysiceManager implements IPhysicsManager {
 
 		for (i = 0, n = this._previousFrameCollisions.length; i < n; i++) {
 			var preFrameCol = this._previousFrameCollisions[i];
-			var preColliderA = preFrameCol._colliderA;
-			var preColliderB = preFrameCol._colliderB;
+			var preColliderA = preFrameCol._colliderA as CannonCollider;
+			var preColliderB = preFrameCol._colliderB as CannonCollider;
 			if (preColliderA._destroyed || preColliderB._destroyed)
 				continue;
 			let ownerA = preColliderA.owner;
@@ -455,7 +903,7 @@ export class CannonPysiceManager implements IPhysicsManager {
 		if (rayResultCall.hasHit) {
 			if (out) {
 				out.succeeded = true;
-				out.collider = CannonCollider._physicObjectsMap.get(rayResultCall.body.layaID);
+				out.collider = CannonCollider._physicObjectsMap.get((rayResultCall.body as any).layaID);
 				var point: Vector3 = out.point;
 				var normal: Vector3 = out.normal;
 				var resultPoint: CANNON.Vec3 = rayResultCall.hitPointWorld;
@@ -494,7 +942,7 @@ export class CannonPysiceManager implements IPhysicsManager {
 			var hitResult: HitResult = collisionsUtils.getHitResult();
 			out.push(hitResult);
 			hitResult.succeeded = true
-			hitResult.collider = CannonCollider._physicObjectsMap.get(result.body.layaID);
+			hitResult.collider = CannonCollider._physicObjectsMap.get((result.body as any).layaID);
 			//TODO:out.hitFraction
 			var point: Vector3 = hitResult.point;
 			var normal: Vector3 = hitResult.normal;

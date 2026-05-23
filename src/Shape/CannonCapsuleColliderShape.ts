@@ -1,4 +1,3 @@
-
 import { ICapsuleColliderShape ,Physics3DColliderShape} from "../../libs/LayaAir";
 import { CannonColliderShape } from "./CannonColliderShape";
 

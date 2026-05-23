@@ -45,7 +45,10 @@ export class CannonMeshCollderShape extends CannonColliderShape implements IMesh
             let p: Vector3 = this._meshPoints[i];
             verts[i] = new CANNON.Vec3(p.x * this._scale.x, p.y * this._scale.y, p.z * this._scale.z);
         }
-        this._btShape = new CANNON.ConvexPolyhedron(verts, this._faces as any);
+        this._btShape = new CANNON.ConvexPolyhedron({
+            vertices: verts,
+            faces: this._faces as any
+        });
         this.addToCannonBody();
     }
 
