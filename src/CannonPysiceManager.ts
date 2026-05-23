@@ -419,8 +419,39 @@ Laya.addBeforeInitCallback((stageConfig: IStageConfig) => {
 		};
 	};
 
+	const OverrideGridBroadphase = function(): void
+	{
+		const GridBroadphasePro = CANNON.GridBroadphase.prototype;
+		GridBroadphasePro.aabbQuery = function(world: CANNON.World, aabb: CANNON.AABB, result?: CANNON.Body[]): CANNON.Body[]
+		{
+			if (result === void 0)
+			{
+				result = [];
+			}
+
+			for (let i = 0; i < world.bodies.length; i++)
+			{
+				const b = world.bodies[i];
+
+				if (b.aabbNeedsUpdate)
+				{
+					b.updateAABB();
+				} // Ugly hack until Body gets aabb
+
+
+				if (b.aabb.overlaps(aabb))
+				{
+					result.push(b);
+				}
+			}
+
+			return result;
+		}
+	};
+
 	OverrideBroadphase();
 	OverrideWorld();
+	OverrideGridBroadphase();
 });
 
 export class CannonPysiceManager implements IPhysicsManager {
