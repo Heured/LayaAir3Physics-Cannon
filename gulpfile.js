@@ -184,7 +184,7 @@ gulp.task("buildJs", async () => {
 gulp.task('concatCannonPhysics', () => {
     return gulp.src([
         path.join("./build/jslib", "laya.cannon-es.js"),
-        './libs/cannon-es.umd.js',
+        './libs/cannon-es.js',
     ])
         .pipe(concat('laya.cannon-es.js'))
         .pipe(gulp.dest('./out/'));
