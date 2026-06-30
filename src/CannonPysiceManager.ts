@@ -193,6 +193,8 @@ Laya.addBeforeInitCallback((stageConfig: IStageConfig) => {
 			this.frictionEquations.length = 0;
 			this.narrowphase.getContacts(p1, p2, this, contacts, oldcontacts, // To be reused
 				this.frictionEquations, frictionEquationPool);
+
+			(this as any).triggerContacts = this.bodyOverlapKeeper.current.slice();
 		
 			if (doProfiling) {
 				profile.narrowphase = performance.now() - profilingStart;
@@ -557,6 +559,7 @@ export class CannonPysiceManager implements IPhysicsManager {
 		this.fixedTimeStep = physicsSettings.fixedTimeStep;
 		this._discreteDynamicsWorld = new CANNON.World();
 		(this._discreteDynamicsWorld as any).callBackBody = [];
+		(this._discreteDynamicsWorld as any).triggerContacts = [];
 
 		const CannonSettings = (physicsSettings as any).Cannon;
 		if (CannonSettings)
@@ -709,6 +712,38 @@ export class CannonPysiceManager implements IPhysicsManager {
 				}
 			}
 			if (collision && isFirstCollision) {
+				this._currentFrameCollisions.push(collision);
+				collision._setUpdateFrame(loopCount);
+			}
+		}
+
+		// kinematic & static || kinematic & kinematic
+		const World = this._discreteDynamicsWorld;
+		const TriggerContacts: number[] = (World as any).triggerContacts;
+		for (let i=0, n=TriggerContacts.length; i<n; i++)
+		{
+			const TempKey = TriggerContacts[i];
+			const id_A = (TempKey & 0xffff0000) >> 16;
+			const id_B = TempKey & 0x0000ffff;
+			
+			const BodyA = World.getBodyById(id_A);
+			const BodyB = World.getBodyById(id_B);
+
+			const componentA = CannonCollider._physicObjectsMap.get((BodyA as any).layaID);
+			const componentB = CannonCollider._physicObjectsMap.get((BodyB as any).layaID);
+			const isTrigger: boolean = componentA._isTrigger || componentB._isTrigger;
+			if (!isTrigger)
+			{
+				continue;
+			}
+
+			const collision = this._collisionsUtils.getCollision(componentA, componentB);
+			const isFirstCollision = collision._updateFrame !== loopCount;
+			if (isFirstCollision)
+			{
+				collision._isTrigger = true;
+				collision.contacts.length = 0;
+
 				this._currentFrameCollisions.push(collision);
 				collision._setUpdateFrame(loopCount);
 			}
