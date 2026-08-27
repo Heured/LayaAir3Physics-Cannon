@@ -386,9 +386,15 @@ Laya.addBeforeInitCallback((stageConfig: IStageConfig) => {
 			const quatNormalize = stepnumber % (this.quatNormalizeSkip + 1) === 0;
 			const quatNormalizeFast = this.quatNormalizeFast;
 		
+			const DYNAMIC_OR_KINEMATIC = DYNAMIC | CANNON.Body.KINEMATIC;
+			const SLEEPING = CANNON.Body.SLEEPING;
 			for (i = 0; i !== N; i++) {
 				bodies[i].integrate(dt, quatNormalize, quatNormalizeFast);
-				bodies[i].aabbNeedsUpdate && (this as any).callBackBody.push(bodies[i]);
+				if ((bodies[i].type & DYNAMIC_OR_KINEMATIC) && bodies[i].sleepState !== SLEEPING)
+				{
+					(this as any).callBackBody.push(bodies[i]);
+					// bodies[i].aabbNeedsUpdate && (this as any).callBackBody.push(bodies[i]);
+				}
 			}
 		
 			this.clearForces();
