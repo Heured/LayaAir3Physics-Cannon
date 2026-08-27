@@ -346,8 +346,8 @@ export class CannonCollider implements ICollider {
 			Vector3.scale(rotShapePosition, this.WorldDistance, rotShapePosition);
 
 			position.x = btPosition.x - rotShapePosition.x;
-			position.y = btPosition.y - rotShapePosition.z;
-			position.z = btPosition.z - rotShapePosition.y;
+			position.y = btPosition.y - rotShapePosition.y;
+			position.z = btPosition.z - rotShapePosition.z;
 		} else {
 			position.x = btPosition.x;
 			position.y = btPosition.y;
