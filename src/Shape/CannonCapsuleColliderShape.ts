@@ -38,9 +38,9 @@ export class CannonCapsuleColliderShape extends CannonColliderShape implements I
         let length:number = Math.max(0,height-2*radius);
         let halflength:number = length*0.5;
         this._sphereShape.radius = radius;
-        cvec3.set(0,0,halflength);
+        cvec3.set(0,halflength,0);
         body.addShape(this._sphereShape,cvec3);
-        cvec3.set(0,0,-halflength);
+        cvec3.set(0,-halflength,0);
         body.addShape(this._sphereShape,cvec3);
         let cylinderShape = new CANNON.Cylinder(radius,radius,length,60);
         body.addShape(cylinderShape);
