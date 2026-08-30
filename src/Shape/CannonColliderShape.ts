@@ -52,7 +52,7 @@ export class CannonColliderShape implements IColliderShape {
 				Quaternion.createFromAxisAngle(Vector3.UnitY, Math.PI / 2, rotation);
 				break;
 			case Physics3DColliderShape.SHAPEORIENTATION_UPY:
-				Quaternion.createFromAxisAngle(Vector3.UnitX, Math.PI / 2, rotation);
+				Quaternion.createFromAxisAngle(Vector3.UnitX, -Math.PI / 2, rotation);
 				break;
 			case Physics3DColliderShape.SHAPEORIENTATION_UPZ:
 				rotation.identity();
