@@ -570,7 +570,7 @@ export class CannonPysiceManager implements IPhysicsManager {
 		const CannonSettings = (physicsSettings as any).Cannon;
 		if (CannonSettings)
 		{
-			this._discreteDynamicsWorld.quatNormalizeSkip = CannonSettings.quatNormalizeSkip ? 1 : 0;
+			this._discreteDynamicsWorld.quatNormalizeSkip = CannonSettings.quatNormalizeSkip;
 			this._discreteDynamicsWorld.quatNormalizeFast = CannonSettings.quatNormalizeFast;
 
 			if (CannonSettings.broadphase == "SAPBroadphase")
