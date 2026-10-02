@@ -5,71 +5,7 @@ import { CannonCollider } from "./Collider/CannonCollider";
 import { ConnonJoint } from "./Joint/ConnonJoint";
 import { CannonSpringJoint } from "./Joint/CannonSpringJoint";
 
-Laya.addBeforeInitCallback((stageConfig: IStageConfig) => {
-	const OverrideBroadphase = function(): void
-	{
-		const Broadphase_makePairsUnique_temp: { keys: string[] } = { keys: [] };
-		const Broadphase_makePairsUnique_p1: CANNON.Body[] = [];
-		const Broadphase_makePairsUnique_p2: CANNON.Body[] = [];
-		const BroadphasePro = CANNON.Broadphase.prototype;
-		BroadphasePro.makePairsUnique = function (pairs1: CANNON.Body[], pairs2: CANNON.Body[]) {
-			const t = Broadphase_makePairsUnique_temp as any;
-			const p1 = Broadphase_makePairsUnique_p1;
-			const p2 = Broadphase_makePairsUnique_p2;
-			const N = pairs1.length;
-		
-			for (let i = 0; i !== N; i++) {
-				p1[i] = pairs1[i];
-				p2[i] = pairs2[i];
-			}
-		
-			pairs1.length = 0;
-			pairs2.length = 0;
-		
-			/*
-			for (let i = 0; i !== N; i++) {
-				const id1 = p1[i].id;
-				const id2 = p2[i].id;
-				const key = id1 < id2 ? `${id1},${id2}` : `${id2},${id1}`;
-				t[key] = i;
-				t.keys.push(key);
-			}
-		
-			for (let i = 0; i !== t.keys.length; i++) {
-				const key = t.keys.pop();
-				const pairIndex = t[key];
-				pairs1.push(p1[pairIndex]);
-				pairs2.push(p2[pairIndex]);
-				delete t[key];
-			}
-			*/
-		
-			const keys = t.keys;
-		
-			for (var i = 0; i !== N; i++) {
-				var id1 = p1[i].id, id2 = p2[i].id;
-				var key = id1 < id2 ? id1 + "," + id2 : id2 + "," + id1;
-		
-				if (t[key] != undefined) {
-					continue;
-				}
-		
-				t[key] = i;
-				keys.push(key);
-			}
-		
-			while (keys.length) {
-				const key = keys.pop();
-				const pairIndex = t[key];
-		
-				pairs1.push(p1[pairIndex]);
-				pairs2.push(p2[pairIndex]);
-		
-				delete t[key];
-			}
-		};
-	}
-	
+Laya.addBeforeInitCallback((stageConfig: IStageConfig) => {	
 	const OverrideWorld = function(): void
 	{
 		const World_step_postStepEvent = {
@@ -457,7 +393,6 @@ Laya.addBeforeInitCallback((stageConfig: IStageConfig) => {
 		}
 	};
 
-	OverrideBroadphase();
 	OverrideWorld();
 	OverrideGridBroadphase();
 });
@@ -587,6 +522,25 @@ export class CannonPysiceManager implements IPhysicsManager {
 					, new CANNON.Vec3(aabbMax.x, aabbMax.y, aabbMax.z)
 					, Params.nx, Params.ny, Params.nz
 				);
+			}
+			else if (CannonSettings.broadphase == "DynamicAABBTreeBroadphase")
+			{
+				this._broadphase = new CANNON.DynamicAABBTreeBroadphase(this._discreteDynamicsWorld);
+			}
+			else if (CannonSettings.broadphase == "GridSAPBroadphase")
+			{
+				const Params = CannonSettings.GridSAPBroadphase_Params;
+				const aabbMin = Params.aabbMin, aabbMax = Params.aabbMax;
+
+				this._broadphase = new CANNON.GridSAPBroadphase(
+					new CANNON.Vec3(aabbMin.x, aabbMin.y, aabbMin.z)
+					, new CANNON.Vec3(aabbMax.x, aabbMax.y, aabbMax.z)
+					, Params.nx, Params.ny, Params.nz
+				);
+			}
+			else if (CannonSettings.broadphase == "MultiBoxPruningBroadphase")
+			{
+				this._broadphase = new CANNON.MultiBoxPruningBroadphase();
 			}
 			else
 			{
