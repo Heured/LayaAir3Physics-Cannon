@@ -218,8 +218,14 @@ export class CannonCollider implements ICollider {
 			}
 			if (this._cannonColliderObject) {
 				this._cannonColliderObject.shapes.length = 0;
-				this._cannonColliderObject.shapeOffsets.length = 0;
-				this._cannonColliderObject.shapeOrientations.length = 0;
+				const Vec3Pool = CANNON.Body.Pool_Vec3;
+				const shapeOffsets = this._cannonColliderObject.shapeOffsets;
+				Vec3Pool.release.apply(Vec3Pool, shapeOffsets);
+				const QuatPool = CANNON.Body.Pool_Quat;
+				const shapeOrientations = this._cannonColliderObject.shapeOrientations;
+				QuatPool.release.apply(QuatPool, shapeOrientations);
+				shapeOffsets.length = 0;
+				shapeOrientations.length = 0;
 				shape.addToCannonBody();
 				(this._isSimulate && lastColliderShape) && (this._removeFromSimulation());//修改shape必须把Collison从物理世界中移除再重新添加
 				this._onShapeChange(shape);//

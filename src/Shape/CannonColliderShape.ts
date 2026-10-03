@@ -185,8 +185,9 @@ export class CannonColliderShape implements IColliderShape {
 		if (this._btShape && btColliderObject) {
 			var localOffset = this._localOffset;
 			var scale = this._scale;
-			var vecs: CANNON.Vec3 = new CANNON.Vec3(localOffset.x * scale.x, localOffset.y * scale.y, localOffset.z * scale.z);
-			btColliderObject.addShape(this._btShape, vecs);
+			const offset = CannonColliderShape._btVector30;
+			offset.set(localOffset.x * scale.x, localOffset.y * scale.y, localOffset.z * scale.z);
+			btColliderObject.addShape(this._btShape, offset);
 		}
 	}
 	/**
